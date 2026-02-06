@@ -2,7 +2,7 @@ import * as core from "@actions/core";
 import * as glob from "@actions/glob";
 import crypto from "crypto";
 import fs from "fs/promises";
-import { createReadStream } from "fs";
+import { createReadStream, existsSync } from "fs";
 import { pipeline } from "stream/promises";
 import os from "os";
 import path from "path";
@@ -168,7 +168,7 @@ export class CacheConfig {
       let keyFiles = await globFiles(".cargo/config.toml\nrust-toolchain\nrust-toolchain.toml");
       const parsedKeyFiles = []; // keyFiles that are parsed, pre-processed and hashed
 
-      hasher = crypto.createHash("sha1");
+      const environmentHasher = crypto.createHash("sha1");
 
       for (const workspace of workspaces) {
         const root = workspace.root;
@@ -218,7 +218,7 @@ export class CacheConfig {
               }
             }
 
-            hasher.update(JSON.stringify(parsed));
+            environmentHasher.update(JSON.stringify(parsed));
 
             parsedKeyFiles.push(cargo_manifest);
           } catch (e) {
@@ -246,7 +246,7 @@ export class CacheConfig {
             // are the one with `path = "..."` to crates within the workspace.
             const packages = (parsed.package as any[]).filter((p: any) => "source" in p || "checksum" in p);
 
-            hasher.update(JSON.stringify(packages));
+            environmentHasher.update(JSON.stringify(packages));
 
             parsedKeyFiles.push(cargo_lock);
           } catch (e) {
@@ -258,19 +258,24 @@ export class CacheConfig {
       }
       keyFiles = sort_and_uniq(keyFiles);
 
-        for (const file of keyFiles) {
-            try {
-                await pipeline(createReadStream(file), hasher);
-            } catch (e) {
-                core.warning(`Error hashing file ${file}: ${e}`);
-                throw e;
-            }
-        }
+      for (const file of keyFiles) {
+          try {
+              if(!existsSync(file)) {
+                  core.warning(`File ${file} does not exist`);
+                  continue;
+              }
+
+              await pipeline(createReadStream(file), environmentHasher);
+          } catch (e) {
+              core.warning(`Error hashing file ${file}: ${e}`);
+              throw e;
+          }
+      }
 
       keyFiles.push(...parsedKeyFiles);
       self.keyFiles = sort_and_uniq(keyFiles);
 
-      let lockHash = digest(hasher);
+      let lockHash = digest(environmentHasher);
       key += `-${lockHash}`;
     }
 
