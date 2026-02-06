@@ -160,6 +160,8 @@ export class CacheConfig {
     }
     self.workspaces = workspaces;
 
+    core.info(`Got workspaces: ${workspaces.map((w) => `${w.root} -> ${w.target}`).join(", ")}`);
+
     // Add hash suffix of all rust environment lockfiles + manifests if
     // 'add-rust-environment-hash-key' is true
     if (core.getInput("add-rust-environment-hash-key").toLowerCase() == "true") {
@@ -256,9 +258,14 @@ export class CacheConfig {
       }
       keyFiles = sort_and_uniq(keyFiles);
 
-      for (const file of keyFiles) {
-        await pipeline(createReadStream(file), hasher);
-      }
+        for (const file of keyFiles) {
+            try {
+                await pipeline(createReadStream(file), hasher);
+            } catch (e) {
+                core.warning(`Error hashing file ${file}: ${e}`);
+                throw e;
+            }
+        }
 
       keyFiles.push(...parsedKeyFiles);
       self.keyFiles = sort_and_uniq(keyFiles);
