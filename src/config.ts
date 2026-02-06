@@ -393,6 +393,7 @@ interface RustVersion {
 }
 
 async function getRustVersions(cmdFormat: string): Promise<Set<RustVersion>> {
+  core.info("Getting Rust versions");
   const versions = new Set<RustVersion>();
 
   versions.add(parseRustVersion(await getCmdOutput(cmdFormat, "rustc -vV")));

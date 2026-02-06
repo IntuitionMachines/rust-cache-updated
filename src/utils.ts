@@ -21,6 +21,8 @@ export async function getCmdOutput(
   options: exec.ExecOptions = {},
 ): Promise<string> {
   cmd = cmdFormat.replace("{0}", cmd);
+  core.info(`Executing command: ${cmd}`);
+
   let stdout = "";
   let stderr = "";
   try {
