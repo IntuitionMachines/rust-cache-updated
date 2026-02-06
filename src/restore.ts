@@ -5,6 +5,8 @@ import { CacheConfig } from "./config";
 import { getCacheProvider, reportError } from "./utils";
 
 process.on("uncaughtException", (e) => {
+  core.error("Uncaught exception");
+
   core.error(e.message);
   if (e.stack) {
     core.error(e.stack);
@@ -12,9 +14,12 @@ process.on("uncaughtException", (e) => {
 });
 
 async function run() {
+  core.info("Starting restore");
+
   const cacheProvider = getCacheProvider();
 
   if (!cacheProvider.cache.isFeatureAvailable()) {
+    core.warning(`Cache is not available.`);
     setCacheHitOutput(false);
     return;
   }

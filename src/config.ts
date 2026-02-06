@@ -55,6 +55,7 @@ export class CacheConfig {
    * This will read the action `input`s, and read and persist `state` as necessary.
    */
   static async new(): Promise<CacheConfig> {
+    core.info("New config being created");
     const self = new CacheConfig();
 
     let cmdFormat = core.getInput("cmd-format");
