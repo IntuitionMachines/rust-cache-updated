@@ -3,7 +3,6 @@ import * as glob from "@actions/glob";
 import crypto from "crypto";
 import fs from "fs/promises";
 import { createReadStream, existsSync } from "fs";
-import { pipeline } from "stream/promises";
 import os from "os";
 import path from "path";
 import * as toml from "smol-toml";
@@ -265,7 +264,16 @@ export class CacheConfig {
                   continue;
               }
 
-              await pipeline(createReadStream(file), environmentHasher);
+              await new Promise<void>((resolve, reject) => {
+                const readStream = createReadStream(file);
+
+                readStream.on('data', (chunk) => {
+                    environmentHasher.update(chunk);
+                });
+
+                readStream.on('end', resolve);
+                readStream.on('error', reject);
+              });
           } catch (e) {
               core.warning(`Error hashing file ${file}: ${e}`);
               throw e;
